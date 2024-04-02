@@ -1,33 +1,19 @@
-# def factorial(n):
-#     """
-#     Compute the factorial of a non-negative integer n.
-#
-#     Args:
-#     - n: An integer
-#
-#     Returns:
-#     - factorial: The factorial of n
-#     """
-#     if n == 0:
-#         return 1
-#     else:
-#         return n * factorial(n-1)
+import time
+import functools
 
-def add_numbers(num1, num2):
-    return num1 + num2
+def timeit(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"Execution time of {func.__name__}: {end_time - start_time} seconds")
+        return result
+    return wrapper
 
-# def reverse_string(input_string):
-#     return input_string[::-1]
+@timeit
+def some_function():
+    time.sleep(1)
 
-#
-# def nested_function(a, b):
-#     return a * b
-#
-# def parent_function(x, y):
-#     result = nested_function(x, y)
-#     return result
-
-if __name__ == "__main__":
-    print(add_numbers(5,6))
-
-
+# Usage
+some_function()
