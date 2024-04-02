@@ -1,58 +1,63 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user
 
-# Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///library.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize SQLAlchemy
 db = SQLAlchemy(app)
 
-# Define User model
-class User(UserMixin, db.Model):
+# Define Book model
+class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    author = db.Column(db.String(100), nullable=False)
+    genre = db.Column(db.String(100), nullable=False)
+    available = db.Column(db.Boolean, default=True)
 
-# Initialize Flask-Login
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+    def __repr__(self):
+        return f'<Book {self.title}>'
 
 # Routes
 @app.route('/')
 def index():
-    return 'Welcome to the Flask login page!'
+    books = Book.query.all()
+    return render_template('index.html', books=books)
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = User.query.filter_by(username=username).first()
-        if user and user.password == password:
-            login_user(user)
-            return redirect(url_for('profile'))
-        else:
-            return 'Invalid username or password'
-    return render_template('login.html')
-
-@app.route('/profile')
-@login_required
-def profile():
-    return f'Hello, {current_user.username}!'
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
+@app.route('/add_book', methods=['POST'])
+def add_book():
+    title = request.form.get('title')
+    author = request.form.get('author')
+    genre = request.form.get('genre')
+    if title and author and genre:
+        new_book = Book(title=title, author=author, genre=genre)
+        db.session.add(new_book)
+        db.session.commit()
     return redirect(url_for('index'))
 
-# Run the app
+@app.route('/borrow/<int:book_id>')
+def borrow_book(book_id):
+    book = Book.query.get_or_404(book_id)
+    if book.available:
+        book.available = False
+        db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/return/<int:book_id>')
+def return_book(book_id):
+    book = Book.query.get_or_404(book_id)
+    if not book.available:
+        book.available = True
+        db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/delete/<int:book_id>')
+def delete_book(book_id):
+    book = Book.query.get_or_404(book_id)
+    db.session.delete(book)
+    db.session.commit()
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
+    db.create_all()
     app.run(debug=True)
